@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/ui_fragment_container"
+              android:orientation="vertical"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+    <ImageButton
+        android:id="@+id/switch_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="end"
+        android:background="@drawable/ic_change_cam_id"
+
+        />
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <ImageButton
+            style="@style/imageBtn"
+            android:id="@+id/gallery_button"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_alignParentTop="true"
+            android:layout_toStartOf="@+id/camera_button"
+            android:layout_marginEnd="30dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_open_gallery"
+            />
+
+        <ImageButton
+            android:id="@+id/camera_button"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_gravity="center"
+            android:layout_centerHorizontal="true"
+            android:background="@drawable/ic_take_photo"/>
+
+        <ImageButton
+            android:id="@+id/record_video_button"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_toEndOf="@id/camera_button"
+            android:layout_marginStart="30dp"
+            android:background="@drawable/ic_record_video"/>
+
+    </RelativeLayout>
+
+</LinearLayout>
