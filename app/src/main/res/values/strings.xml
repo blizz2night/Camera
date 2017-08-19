@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">YulieCamera</string>
+    <string name="galley_image_button">galley</string>
+    <string name="camera_image_button">camera</string>
+    <string name="record_image_button">record</string>
+    <string name="switch_image_button">switch</string>
 </resources>

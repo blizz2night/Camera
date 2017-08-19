@@ -8,8 +8,9 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
-<style name="imageBtn" parent="Widget.AppCompat.Button">
+<style name="imageBtn" parent="Widget.AppCompat.ImageButton">
     <item name="android:background">@drawable/img_btn</item>
+    <item name="android:scaleType">centerCrop</item>
 </style>
 
 

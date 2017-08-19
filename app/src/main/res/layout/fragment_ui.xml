@@ -3,8 +3,10 @@
               android:id="@+id/ui_fragment_container"
               android:orientation="vertical"
               android:layout_width="match_parent"
-              android:layout_height="match_parent">
+              android:layout_height="match_parent"
+    >
     <ImageButton
+        android:contentDescription="@string/switch_image_button"
         android:id="@+id/switch_button"
         android:layout_width="40dp"
         android:layout_height="40dp"
@@ -18,30 +20,34 @@
         <ImageButton
             style="@style/imageBtn"
             android:id="@+id/gallery_button"
+            android:contentDescription="@string/galley_image_button"
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:layout_alignParentTop="true"
             android:layout_toStartOf="@+id/camera_button"
             android:layout_marginEnd="30dp"
-            android:scaleType="centerCrop"
             android:src="@drawable/ic_open_gallery"
             />
 
         <ImageButton
+            style="@style/imageBtn"
+            android:contentDescription="@string/camera_image_button"
             android:id="@+id/camera_button"
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:layout_gravity="center"
             android:layout_centerHorizontal="true"
-            android:background="@drawable/ic_take_photo"/>
+            android:src="@drawable/ic_take_photo"/>
 
         <ImageButton
+            style="@style/imageBtn"
+            android:contentDescription="@string/record_image_button"
             android:id="@+id/record_video_button"
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:layout_toEndOf="@id/camera_button"
             android:layout_marginStart="30dp"
-            android:background="@drawable/ic_record_video"/>
+            android:src="@drawable/ic_record_video"/>
 
     </RelativeLayout>
 
