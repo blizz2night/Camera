@@ -41,13 +41,13 @@ public class CameraActivity extends AppCompatActivity implements UIFragment.Call
     public void setButtonIsClickable(int resource, boolean isClickable) {
         FragmentManager fm = getSupportFragmentManager();
         UIFragment fragment = (UIFragment) fm.findFragmentById(R.id.ui_fragment_container);
-        fragment.setBottonIsClickable(resource, isClickable);
+        fragment.setButtonIsClickable(resource, isClickable);
     }
 
     @Override
     public void setButtonsIsClickable(boolean isClickable) {
         FragmentManager fm = getSupportFragmentManager();
         UIFragment fragment = (UIFragment) fm.findFragmentById(R.id.ui_fragment_container);
-        fragment.setBottonsIsClickable(isClickable);
+        fragment.setButtonsIsClickable(isClickable);
     }
 }

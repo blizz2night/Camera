@@ -21,19 +21,19 @@ import static personal.yulie.android.yuliecamera.Event.SWITCH_CAM;
 public class UIFragment extends Fragment{
     private static final String TAG = "UIFragment";
 
-    private ImageButton mSwithButton;
+    private ImageButton mSwitchButton;
     private ImageButton mGalleryButton;
     private ImageButton mCameraButton;
     private ImageButton mRecordButton;
     private Callbacks mCallbacks;
 
-    public void setBottonIsClickable(final int resource, final boolean isClickable) {
+    public void setButtonIsClickable(final int resource, final boolean isClickable) {
         switch (resource) {
             case R.id.camera_button:
                 mCameraButton.setClickable(isClickable);
                 break;
             case R.id.switch_button:
-                mSwithButton.setClickable(isClickable);
+                mSwitchButton.setClickable(isClickable);
                 break;
             case R.id.record_video_button:
                 mRecordButton.setClickable(isClickable);
@@ -41,9 +41,9 @@ public class UIFragment extends Fragment{
         }
     }
 
-    public void setBottonsIsClickable(final boolean isClickable) {
+    public void setButtonsIsClickable(final boolean isClickable) {
         mCameraButton.setClickable(isClickable);
-        mSwithButton.setClickable(isClickable);
+        mSwitchButton.setClickable(isClickable);
         mRecordButton.setClickable(isClickable);
         mGalleryButton.setClickable(isClickable);
     }
@@ -80,11 +80,11 @@ public class UIFragment extends Fragment{
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_ui, container, false);
-        mSwithButton = (ImageButton) view.findViewById(R.id.switch_button);
-        mSwithButton.setOnClickListener(new View.OnClickListener() {
+        mSwitchButton = (ImageButton) view.findViewById(R.id.switch_button);
+        mSwitchButton.setOnClickListener(new NoDoubleClickListener() {
             @Override
-            public void onClick(View v) {
-//                mSwithButton.setClickable(false);
+            public void onNoDoubleClickListener(View v) {
+//                mSwitchButton.setClickable(false);
                 disableButtons();
                 mCallbacks.handleEvent(SWITCH_CAM);
             }
@@ -123,21 +123,19 @@ public class UIFragment extends Fragment{
             }
         });
         mCameraButton = (ImageButton) view.findViewById(R.id.camera_button);
-        mCameraButton.setOnClickListener(new View.OnClickListener() {
+        mCameraButton.setOnClickListener(new NoDoubleClickListener() {
             @Override
-            public void onClick(View v) {
+            public void onNoDoubleClickListener(View v) {
                 disableButtons();
 
                 mCallbacks.handleEvent(CAPTURE);
             }
         });
         mRecordButton = (ImageButton) view.findViewById(R.id.record_video_button);
-        mRecordButton.setOnClickListener(new View.OnClickListener() {
+        mRecordButton.setOnClickListener(new NoDoubleClickListener() {
             @Override
-            public void onClick(View v) {
+            public void onNoDoubleClickListener(View v) {
                 disableButtons();
-
-
                 mCallbacks.handleEvent(RECORD);
             }
         });
@@ -147,14 +145,14 @@ public class UIFragment extends Fragment{
     private void disableButtons() {
         mRecordButton.setClickable(false);
         mCameraButton.setClickable(false);
-        mSwithButton.setClickable(false);
+        mSwitchButton.setClickable(false);
         mGalleryButton.setClickable(false);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        setBottonsIsClickable(true);
+        setButtonsIsClickable(true);
     }
 
 }

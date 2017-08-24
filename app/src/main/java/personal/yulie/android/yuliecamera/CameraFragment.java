@@ -174,6 +174,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
         }
         closeSession();
         closeCamera();
+
         stopBackgroundThread();
         super.onPause();
     }
@@ -394,7 +395,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
                         startPreview();
                         mMediaRecorder.stop();
                         mMediaRecorder.reset();
-                        mMediaRecorder = null;
+                        //mMediaRecorder = null;
                         mIsRecording = false;
                         mCallbacks.changeRecordBtnIcon(mIsRecording);
                         Toast.makeText(getActivity(), "Save to" + mRecordOutputUrl, Toast.LENGTH_SHORT).show();
@@ -550,18 +551,18 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     }
 
     private void closeCamera() {
-        if (null != mMediaRecorder) {
-            mMediaRecorder.release();
-            mMediaRecorder = null;
-        }
+
         if (null != mCameraDevice) {
             mCameraDevice.close();
             mCameraDevice = null;
         }
-
         if (null != mImageReader) {
             mImageReader.close();
             mImageReader = null;
+        }
+        if (null != mMediaRecorder) {
+            mMediaRecorder.release();
+            mMediaRecorder = null;
         }
     }
 
