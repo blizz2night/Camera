@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.support.annotation.MainThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -123,13 +124,12 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
         startBackgroundThread();
         if (mPreviewView.isAvailable()) {
             try {
-                // TODO: 17-8-23
-
                 if (!checkCameraPermission()) {
                     return;
                 }
                 setupCamera(mCameraId, mPreviewView.getWidth(), mPreviewView.getHeight());
-                mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler);
+                mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
+                mCallbacks.setButtonsIsClickable(true);
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             }
@@ -159,6 +159,20 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
 
     @Override
     public void onPause() {
+        if (mIsRecording) {
+//            if (null != mMediaRecorder) {
+//                try {
+//                    mRecordSession.stopRepeating();
+//                } catch (CameraAccessException e) {
+//                    e.printStackTrace();
+//                }
+//                mMediaRecorder.stop();
+//                mMediaRecorder = null;
+//            }
+            mIsRecording = !mIsRecording;
+            mCallbacks.changeRecordBtnIcon(mIsRecording);
+        }
+        closeSession();
         closeCamera();
         stopBackgroundThread();
         super.onPause();
@@ -180,7 +194,9 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
             if (!checkCameraPermission()) return;
             Log.i(TAG, "onSurfaceTextureAvailable: "+Thread.currentThread());
             setupCamera(width, height);
-            mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler);
+            mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
+            mCallbacks.setButtonsIsClickable(true);
+
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -228,6 +244,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
         mCameraId = cameraId;
         CameraCharacteristics ch = mCameraManager.getCameraCharacteristics(mCameraId);
         StreamConfigurationMap map = ch.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+
         mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width,
                 height);
         Size imageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG), width, height);
@@ -236,7 +253,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
                 imageSize.getHeight(),
                 ImageFormat.JPEG, 6
         );
-        mMediaRecorder = new MediaRecorder();
+//        mMediaRecorder = new MediaRecorder();
 //        mRecordSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class), width, height);
         mRecordSize = new Size(1280, 720);
         mImageReader.setOnImageAvailableListener(this, mHandler);
@@ -270,6 +287,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     }
 
     private void setupMediaRecorder() throws IOException {
+        mMediaRecorder = new MediaRecorder();
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
@@ -354,6 +372,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
 
     }
 
+    @MainThread
     public void handleEvent(int request) {
         try {
             switch (request) {
@@ -375,6 +394,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
                         startPreview();
                         mMediaRecorder.stop();
                         mMediaRecorder.reset();
+                        mMediaRecorder = null;
                         mIsRecording = false;
                         mCallbacks.changeRecordBtnIcon(mIsRecording);
                         Toast.makeText(getActivity(), "Save to" + mRecordOutputUrl, Toast.LENGTH_SHORT).show();
@@ -530,28 +550,30 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     }
 
     private void closeCamera() {
+        if (null != mMediaRecorder) {
+            mMediaRecorder.release();
+            mMediaRecorder = null;
+        }
+        if (null != mCameraDevice) {
+            mCameraDevice.close();
+            mCameraDevice = null;
+        }
 
-            if (null != mPreviewSession) {
-                mPreviewSession.close();
-                mPreviewSession = null;
-            }
-            if (null != mRecordSession) {
-                mRecordSession.close();
-                mRecordSession = null;
-            }
-            if (null != mCameraDevice) {
-                mCameraDevice.close();
-                mCameraDevice = null;
-            }
-            if (null != mMediaRecorder) {
-                mMediaRecorder.release();
-                mMediaRecorder = null;
-            }
-            if (null != mImageReader) {
-                mImageReader.close();
-                mImageReader = null;
-            }
+        if (null != mImageReader) {
+            mImageReader.close();
+            mImageReader = null;
+        }
+    }
 
+    private void closeSession() {
+        if (null != mPreviewSession) {
+            mPreviewSession.close();
+            mPreviewSession = null;
+        }
+        if (null != mRecordSession) {
+            mRecordSession.close();
+            mRecordSession = null;
+        }
     }
     private void showToast(final String text) {
         final Activity activity = getActivity();

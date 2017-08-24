@@ -28,35 +28,24 @@ public class UIFragment extends Fragment{
     private Callbacks mCallbacks;
 
     public void setBottonIsClickable(final int resource, final boolean isClickable) {
-        getView().post(new Runnable() {
-            @Override
-            public void run() {
-                switch (resource) {
-                    case R.id.camera_button:
-                        mCameraButton.setClickable(isClickable);
-                        break;
-                    case R.id.switch_button:
-                        mSwithButton.setClickable(isClickable);
-                        break;
-                    case R.id.record_video_button:
-                        mRecordButton.setClickable(isClickable);
-                        break;
-                }
-            }
-        });
-
+        switch (resource) {
+            case R.id.camera_button:
+                mCameraButton.setClickable(isClickable);
+                break;
+            case R.id.switch_button:
+                mSwithButton.setClickable(isClickable);
+                break;
+            case R.id.record_video_button:
+                mRecordButton.setClickable(isClickable);
+                break;
+        }
     }
 
     public void setBottonsIsClickable(final boolean isClickable) {
-        getView().post(new Runnable() {
-            @Override
-            public void run() {
-                mCameraButton.setClickable(isClickable);
-                mSwithButton.setClickable(isClickable);
-                mRecordButton.setClickable(isClickable);
-                mGalleryButton.setClickable(isClickable);
-            }
-        });
+        mCameraButton.setClickable(isClickable);
+        mSwithButton.setClickable(isClickable);
+        mRecordButton.setClickable(isClickable);
+        mGalleryButton.setClickable(isClickable);
     }
 
     public interface Callbacks {
@@ -66,16 +55,12 @@ public class UIFragment extends Fragment{
 
 
     public void changeRecordIcon(final boolean isRecording) {
-        mRecordButton.post(new Runnable() {
-            @Override
-            public void run() {
-                if (isRecording) {
-                    mRecordButton.setImageResource(R.drawable.ic_action_stop);
-                } else {
-                    mRecordButton.setImageResource(R.drawable.ic_record_video);
-                }
-            }
-        });
+        if (isRecording) {
+            mRecordButton.setImageResource(R.drawable.ic_action_stop);
+        } else {
+            mRecordButton.setImageResource(R.drawable.ic_record_video);
+        }
+
     }
 
     public static UIFragment newInstance() {
@@ -105,14 +90,12 @@ public class UIFragment extends Fragment{
             }
         });
         mGalleryButton= (ImageButton) view.findViewById(R.id.gallery_button);
-        mGalleryButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        mGalleryButton.setOnClickListener(new NoDoubleClickListener() {
+//            @Override
+//            public void onClick(View v) {
 //                disableButtons();
 //                PackageManager pm = getActivity().getPackageManager();
-                Intent intent = new Intent(Intent.ACTION_MAIN);
-                intent.addCategory(Intent.CATEGORY_APP_GALLERY);
-                intent = Intent.createChooser(intent, "Choose~");
+
 //                ResolveInfo info = null;
 //                for (ResolveInfo activity : activities) {
 //                    Log.i(TAG, activity.loadLabel(pm).toString());
@@ -127,9 +110,16 @@ public class UIFragment extends Fragment{
 //                        info.activityInfo.name
 //                );
 //                disableButtons();
-                startActivity(intent);
 //                disableButtons();
 
+//            }
+
+            @Override
+            protected void onNoDoubleClickListener(View v) {
+                Intent intent = new Intent(Intent.ACTION_MAIN);
+                intent.addCategory(Intent.CATEGORY_APP_GALLERY);
+                intent = Intent.createChooser(intent, "Choose~");
+                startActivity(intent);
             }
         });
         mCameraButton = (ImageButton) view.findViewById(R.id.camera_button);
