@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/ui_fragment_container"
+              android:orientation="horizontal"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:background="@android:color/background_dark"
+    >
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        >
+
+        <ImageButton
+            android:id="@+id/gallery_button"
+            style="@style/imageBtn"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:contentDescription="@string/galley_image_button"
+            android:layout_above="@id/camera_button"
+            android:layout_marginBottom="20dp"
+            android:src="@drawable/ic_open_gallery"
+            android:layout_marginStart="13dp"
+            />
+
+        <ImageButton
+            android:id="@+id/camera_button"
+            style="@style/imageBtn"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_centerVertical="true"
+            android:contentDescription="@string/camera_image_button"
+            android:src="@drawable/ic_take_photo"
+            android:layout_marginStart="13dp"/>
+
+        <ImageButton
+            android:id="@+id/record_video_button"
+            style="@style/imageBtn"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_below="@id/camera_button"
+            android:contentDescription="@string/record_image_button"
+            android:src="@drawable/ic_record_video"
+            android:layout_marginTop="20dp"
+            android:layout_marginStart="13dp"/>
+
+    </RelativeLayout>
+    <ImageButton
+        android:contentDescription="@string/switch_image_button"
+        android:id="@+id/switch_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_change_cam_id"
+
+        />
+</LinearLayout>

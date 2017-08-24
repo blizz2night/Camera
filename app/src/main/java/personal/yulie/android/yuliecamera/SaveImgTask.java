@@ -1,6 +1,7 @@
 package personal.yulie.android.yuliecamera;
 
 import android.media.Image;
+import android.util.Log;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -12,33 +13,38 @@ import java.nio.ByteBuffer;
  */
 
 public class SaveImgTask implements Runnable {
+    public interface Callback {
+        void postImageSaved();
+    }
+    private static final String TAG = SaveImgTask.class.getSimpleName();
     private File mFile;
     private Image mImage;
+    private Callback mCallback;
 
-    public SaveImgTask(Image image,File file) {
+    public SaveImgTask(Image image, File file) {
         mFile = file;
         mImage = image;
     }
+
+    public SaveImgTask(Image image, File file, Callback callback) {
+        this(image, file);
+        mCallback = callback;
+    }
     @Override
     public void run() {
+        Log.i(TAG, "run: "+Thread.currentThread());
         ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
         byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
-        FileOutputStream output = null;
-        try {
-            output = new FileOutputStream(mFile);
+        try (FileOutputStream output = new FileOutputStream(mFile)){
             output.write(bytes);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             mImage.close();
-            if (null != output) {
-                try {
-                    output.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+        }
+        if (null!=mCallback) {
+            mCallback.postImageSaved();
         }
     }
 }
