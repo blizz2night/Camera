@@ -60,6 +60,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     private TextureView mPreviewView;
     private Handler mHandler;
     private HandlerThread mHandlerThread;
+//    private HandlerThread mCameraHandlerThread;
     private Size mPreviewSize;
     private CameraManager mCameraManager;
     private CameraDevice mCameraDevice;
@@ -67,6 +68,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     private CameraCaptureSession mPreviewSession;
     private Semaphore mCameraOpenCloseLock = new Semaphore(1);
     private CaptureRequest.Builder mPreviewRequestBuilder;
+    private CaptureRequest mCaptureRequest;
     private ImageReader mImageReader;
     private File mSaveDir;
     private String[] mCameraIds;
@@ -196,6 +198,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
             Log.i(TAG, "onSurfaceTextureAvailable: "+Thread.currentThread());
             setupCamera(width, height);
             mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
+
             mCallbacks.setButtonsIsClickable(true);
 
         } catch (CameraAccessException e) {
@@ -207,7 +210,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
         try {
             mPreviewSize = new Size(width, height);
-            setupCamera(mCameraId, height, width);
+            setupCamera(mCameraId, width, height);
             startPreview();
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -254,6 +257,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
                 imageSize.getHeight(),
                 ImageFormat.JPEG, 6
         );
+
 //        mMediaRecorder = new MediaRecorder();
 //        mRecordSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class), width, height);
         mRecordSize = new Size(1280, 720);
@@ -343,6 +347,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
         surfaceTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         Surface surface = new Surface(surfaceTexture);
         mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+        initCaptureRequest();
         mPreviewRequestBuilder.addTarget(surface);
         mCameraDevice.createCaptureSession(
                 Arrays.asList(surface, mImageReader.getSurface()),
@@ -460,26 +465,27 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
         if (null == mCameraDevice || null == mImageReader || null == activity) {
             return;
         }
-
-        CaptureRequest.Builder requestBuilder = null;
-        try {
-            requestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-
-        requestBuilder.addTarget(mImageReader.getSurface());
-        requestBuilder.build();
-
         try {
             if (!mIsRecording) {
-                mPreviewSession.capture(requestBuilder.build(), mCaptureCaptureCallback, null);
+                mPreviewSession.capture(mCaptureRequest, mCaptureCaptureCallback, null);
             } else {
-                mRecordSession.capture(requestBuilder.build(), mCaptureCaptureCallback, null);
+                mRecordSession.capture(mCaptureRequest, mCaptureCaptureCallback, null);
             }
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    private void initCaptureRequest() {
+            CaptureRequest.Builder requestBuilder = null;
+            try {
+                requestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+
+            requestBuilder.addTarget(mImageReader.getSurface());
+            mCaptureRequest =requestBuilder.build();
     }
 
     private void startRecord() throws CameraAccessException {
