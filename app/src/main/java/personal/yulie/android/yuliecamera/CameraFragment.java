@@ -24,6 +24,7 @@ import android.os.HandlerThread;
 import android.support.annotation.MainThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.UiThread;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -53,7 +54,7 @@ import static personal.yulie.android.yuliecamera.Event.SWITCH_CAM;
  */
 
 public class CameraFragment extends Fragment implements TextureView.SurfaceTextureListener,
-        ImageReader.OnImageAvailableListener{
+        ImageReader.OnImageAvailableListener {
     public static final String TAG = "PreviewFragment";
     private static final int MESSAGE_SAVE_IMAGE = 0;
 
@@ -190,27 +191,40 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     }
 
     @Override
-    public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+    public void onSurfaceTextureAvailable(SurfaceTexture surface, final int width, final int height) {
         Log.i(TAG, "onSurfaceTextureAvailable: Init");
+        if (!checkCameraPermission()) return;
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                Log.i(TAG, "onSurfaceTextureAvailable: InitCam" + Thread.currentThread());
+                if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return;
+                }
+                try {
+                    setupCamera(width, height);
+                    mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+                mCallbacks.setButtonsIsClickable(true);
+            }
+        });
 
-        try {
-            if (!checkCameraPermission()) return;
-            Log.i(TAG, "onSurfaceTextureAvailable: "+Thread.currentThread());
-            setupCamera(width, height);
-            mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
-
-            mCallbacks.setButtonsIsClickable(true);
-
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
     public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
         try {
             mPreviewSize = new Size(width, height);
-            setupCamera(mCameraId, width, height);
+            setupCamera(mCameraId, height, width);
             startPreview();
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -257,7 +271,6 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
                 imageSize.getHeight(),
                 ImageFormat.JPEG, 6
         );
-
 //        mMediaRecorder = new MediaRecorder();
 //        mRecordSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class), width, height);
         mRecordSize = new Size(1280, 720);
@@ -380,74 +393,99 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
 
     @MainThread
     public void handleEvent(int request) {
-        try {
-            switch (request) {
-                case CAPTURE:
-                    Log.i(TAG, "handleEvent: CAPTURE " + Thread.currentThread());
-                    //mCallbacks.setButtonIsClickable(R.id.camera_button,true);
-                    capture();
-                    break;
-                case RECORD:
-                    if (!mIsRecording) {
-                        mIsRecording = true;
-                        Log.i(TAG, "handleEvent: Start RECORD " + Thread.currentThread());
-                        startRecord();
-                        mMediaRecorder.start();
-                        mCallbacks.changeRecordBtnIcon(mIsRecording);
-                        mCallbacks.setButtonIsClickable(R.id.record_video_button,true);
-                    } else {
-                        Log.i(TAG, "handleEvent: Stop RECORD" + Thread.currentThread());
-                        startPreview();
-                        mMediaRecorder.stop();
-                        mMediaRecorder.reset();
-                        //mMediaRecorder = null;
-                        mIsRecording = false;
-                        mCallbacks.changeRecordBtnIcon(mIsRecording);
-                        Toast.makeText(getActivity(), "Save to" + mRecordOutputUrl, Toast.LENGTH_SHORT).show();
-                        mCallbacks.setButtonsIsClickable(true);
+        switch (request) {
+            case CAPTURE:
+                //mCallbacks.setButtonIsClickable(R.id.camera_button,true);
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.i(TAG, "handleEvent: CAPTURE " + Thread.currentThread());
+                        capture();
                     }
-                    break;
-                case SWITCH_CAM:
-                    Log.i(TAG, "handleEvent: SWITCH_CAM" + Thread.currentThread());
-                    closeCamera();
-                    mCameraId = String.valueOf((Integer.parseInt(mCameraId) + 1) % mCameraIds.length);
-                    if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                        // TODO: Consider calling
-                        //    ActivityCompat#requestPermissions
-                        // here to request the missing permissions, and then overriding
-                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                        //                                          int[] grantResults)
-                        // to handle the case where the user grants the permission. See the documentation
-                        // for ActivityCompat#requestPermissions for more details.
-                        return;
+                });
+                break;
+            case RECORD:
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            if (!mIsRecording) {
+                                mIsRecording = true;
+                                Log.i(TAG, "handleEvent: Start RECORD " + Thread.currentThread());
+                                startRecord();
+                                mMediaRecorder.start();
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        mCallbacks.changeRecordBtnIcon(mIsRecording);
+                                        mCallbacks.setButtonIsClickable(R.id.record_video_button, true);
+                                    }
+                                });
+                            } else {
+                                Log.i(TAG, "handleEvent: Stop RECORD" + Thread.currentThread());
+                                startPreview();
+                                mMediaRecorder.stop();
+                                mMediaRecorder.reset();
+                                mIsRecording = false;
+                                Toast.makeText(getActivity(), "Save to" + mRecordOutputUrl, Toast.LENGTH_SHORT).show();
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        mCallbacks.changeRecordBtnIcon(mIsRecording);
+                                        mCallbacks.setButtonsIsClickable(true);
+                                    }
+                                });
+                            }
+                        } catch (CameraAccessException e) {
+                            Log.e(TAG, "run: record", e);
+                        }
                     }
-                    setupCamera(mCameraId, mPreviewSize.getWidth(), mPreviewSize.getHeight());
-                    mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
-                    mCallbacks.setButtonsIsClickable(true);
-
-                    break;
-            }
-        } catch (CameraAccessException e) {
-            Log.e(TAG, "handleEvent: " + request, e);
-        } catch (RuntimeException e) {
-            Log.e(TAG, "Stop MediaRecorder Failed",e);
+                });
+                break;
+            case SWITCH_CAM:
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.i(TAG, "handleEvent: SWITCH_CAM" + Thread.currentThread());
+                        closeCamera();
+                        mCameraId = String.valueOf((Integer.parseInt(mCameraId) + 1) % mCameraIds.length);
+                        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                            // TODO: Consider calling
+                            //    ActivityCompat#requestPermissions
+                            // here to request the missing permissions, and then overriding
+                            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                            //                                          int[] grantResults)
+                            // to handle the case where the user grants the permission. See the documentation
+                            // for ActivityCompat#requestPermissions for more details.
+                            return;
+                        }
+                        try {
+                            setupCamera(mCameraId, mPreviewSize.getWidth(), mPreviewSize.getHeight());
+                            mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
+                        } catch (CameraAccessException e) {
+                            e.printStackTrace();
+                        }
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                mCallbacks.setButtonsIsClickable(true);
+                            }
+                        });
+                    }
+                });
+                break;
         }
-//        catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-
     }
 
         CameraCaptureSession.CaptureCallback mCaptureCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         @Override
         public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
             super.onCaptureCompleted(session, request, result);
-//                Toast.makeText(activity, "captured", Toast.LENGTH_SHORT).show();
             getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     showToast("Save to "+mSaveImgFile);
-                    //mCallbacks.setButtonIsClickable(R.id.camera_button,true);
+                    mCallbacks.setButtonIsClickable(R.id.camera_button,true);
                 }
             });
 

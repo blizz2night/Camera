@@ -91,29 +91,6 @@ public class UIFragment extends Fragment{
         });
         mGalleryButton= (ImageButton) view.findViewById(R.id.gallery_button);
         mGalleryButton.setOnClickListener(new NoDoubleClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                disableButtons();
-//                PackageManager pm = getActivity().getPackageManager();
-
-//                ResolveInfo info = null;
-//                for (ResolveInfo activity : activities) {
-//                    Log.i(TAG, activity.loadLabel(pm).toString());
-//                    if (activity.loadLabel(pm).toString().equals("PhotoGallery")) {
-//                        info = activity;
-//                        break;
-//                    }
-//                }
-//
-//                intent = new Intent(Intent.ACTION_MAIN).setClassName(
-//                        info.activityInfo.applicationInfo.packageName,
-//                        info.activityInfo.name
-//                );
-//                disableButtons();
-//                disableButtons();
-
-//            }
-
             @Override
             protected void onNoDoubleClickListener(View v) {
                 Intent intent = new Intent(Intent.ACTION_MAIN);
@@ -122,6 +99,7 @@ public class UIFragment extends Fragment{
                 startActivity(intent);
             }
         });
+        
         mCameraButton = (ImageButton) view.findViewById(R.id.camera_button);
         mCameraButton.setOnClickListener(new NoDoubleClickListener() {
             @Override
