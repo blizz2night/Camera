@@ -21,10 +21,10 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.support.annotation.MainThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.UiThread;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -56,12 +56,17 @@ import static personal.yulie.android.yuliecamera.Event.SWITCH_CAM;
 public class CameraFragment extends Fragment implements TextureView.SurfaceTextureListener,
         ImageReader.OnImageAvailableListener {
     public static final String TAG = "PreviewFragment";
-    private static final int MESSAGE_SAVE_IMAGE = 0;
+    private static final int REQUEST_PERM = 0;
+    private static final String[] PERMISSIONS = {
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
 
     private TextureView mPreviewView;
     private Handler mHandler;
     private HandlerThread mHandlerThread;
-//    private HandlerThread mCameraHandlerThread;
+    private static final Handler sMainHandler = new Handler(Looper.getMainLooper());
     private Size mPreviewSize;
     private CameraManager mCameraManager;
     private CameraDevice mCameraDevice;
@@ -126,16 +131,24 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
 //        Log.i(TAG, "onResume: "+mPreviewView.isAvailable());
         startBackgroundThread();
         if (mPreviewView.isAvailable()) {
-            try {
-                if (!checkCameraPermission()) {
-                    return;
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        checkCameraPermission(PERMISSIONS);
+                        setupCamera(mCameraId, mPreviewView.getWidth(), mPreviewView.getHeight());
+                        mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                    sMainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            mCallbacks.setButtonsIsClickable(true);
+                        }
+                    });
                 }
-                setupCamera(mCameraId, mPreviewView.getWidth(), mPreviewView.getHeight());
-                mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
-                mCallbacks.setButtonsIsClickable(true);
-            } catch (CameraAccessException e) {
-                e.printStackTrace();
-            }
+            });
         }
     }
 
@@ -146,17 +159,14 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
         mHandler = new Handler(mHandlerThread.getLooper());
     }
 
-    private void stopBackgroundThread() {
+    private void stopBackgroundThread() throws InterruptedException {
         Log.d(TAG, "stopBackgroundThread: ");
         if (null != mHandlerThread && mHandlerThread.isAlive()) {
             mHandlerThread.quitSafely();
-            try {
-                mHandlerThread.join();
-                mHandlerThread = null;
-                mHandler = null;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            mHandlerThread.join();
+            mHandlerThread = null;
+            mHandler = null;
+
         }
     }
 
@@ -178,7 +188,11 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
         closeSession();
         closeCamera();
 
-        stopBackgroundThread();
+        try {
+            stopBackgroundThread();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         super.onPause();
     }
 
@@ -193,28 +207,27 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, final int width, final int height) {
         Log.i(TAG, "onSurfaceTextureAvailable: Init");
-        if (!checkCameraPermission()) return;
         mHandler.post(new Runnable() {
             @Override
             public void run() {
                 Log.i(TAG, "onSurfaceTextureAvailable: InitCam" + Thread.currentThread());
-                if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    // TODO: Consider calling
-                    //    ActivityCompat#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for ActivityCompat#requestPermissions for more details.
-                    return;
-                }
+
                 try {
                     setupCamera(width, height);
-                    mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
+                    if (checkCameraPermission(PERMISSIONS)) {
+                        mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
+                        sMainHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                mCallbacks.setButtonsIsClickable(true);
+                            }
+                        });
+                    } else {
+                        requestPermissions(PERMISSIONS, REQUEST_PERM);
+                    }
                 } catch (CameraAccessException e) {
-                    e.printStackTrace();
+                    Log.e(TAG, "SurfaceTexture init cam run: "+Thread.currentThread(), e);
                 }
-                mCallbacks.setButtonsIsClickable(true);
             }
         });
 
@@ -224,7 +237,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
         try {
             mPreviewSize = new Size(width, height);
-            setupCamera(mCameraId, height, width);
+            setupCamera(mCameraId, width, height);
             startPreview();
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -240,21 +253,37 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
     }
 
-    private boolean checkCameraPermission() {
-        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            if (!ActivityCompat.shouldShowRequestPermissionRationale(getActivity(), Manifest.permission.CAMERA)) {
+    private boolean checkCameraPermission(String[] permissions) {
+        for (String permission : permissions) {
+            if (ActivityCompat.checkSelfPermission(getActivity(), permission) != PackageManager.PERMISSION_GRANTED) {
                 return false;
             }
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
         }
         return true;
     }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        for (int result : grantResults) {
+            if (result != PackageManager.PERMISSION_GRANTED) {
+                Log.i(TAG, "onRequestPermissionsResult: no permission");
+                getActivity().finish();
+                return;
+            }
+        }
+        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+//            try {
+//                Log.i(TAG, "onRequestPermissionsResult: "+Thread.currentThread());
+//                /mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
+//            } catch (CameraAccessException e) {
+//                e.printStackTrace();
+//            }
+        }
+    }
+
+
 
     private void setupCamera(String cameraId, int width, int height) throws CameraAccessException {
         mCameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
@@ -265,11 +294,13 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
 
         mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width,
                 height);
-        Size imageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG), width, height);
+//        Size imageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG), width, height);
+        Size[] Sizes = map.getOutputSizes(ImageFormat.JPEG);
+        Size imageSize = Sizes[0];
         mImageReader = ImageReader.newInstance(
                 imageSize.getWidth(),
                 imageSize.getHeight(),
-                ImageFormat.JPEG, 6
+                ImageFormat.JPEG, 1
         );
 //        mMediaRecorder = new MediaRecorder();
 //        mRecordSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class), width, height);
@@ -379,6 +410,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
                         } catch (CameraAccessException e) {
                             e.printStackTrace();
                         }
+
                     }
 
                     @Override
@@ -414,7 +446,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
                                 Log.i(TAG, "handleEvent: Start RECORD " + Thread.currentThread());
                                 startRecord();
                                 mMediaRecorder.start();
-                                getActivity().runOnUiThread(new Runnable() {
+                                sMainHandler.post(new Runnable() {
                                     @Override
                                     public void run() {
                                         mCallbacks.changeRecordBtnIcon(mIsRecording);
@@ -427,10 +459,10 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
                                 mMediaRecorder.stop();
                                 mMediaRecorder.reset();
                                 mIsRecording = false;
-                                Toast.makeText(getActivity(), "Save to" + mRecordOutputUrl, Toast.LENGTH_SHORT).show();
-                                getActivity().runOnUiThread(new Runnable() {
+                                sMainHandler.post(new Runnable() {
                                     @Override
                                     public void run() {
+                                        showToast("Save to" + mRecordOutputUrl);
                                         mCallbacks.changeRecordBtnIcon(mIsRecording);
                                         mCallbacks.setButtonsIsClickable(true);
                                     }
@@ -449,23 +481,14 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
                         Log.i(TAG, "handleEvent: SWITCH_CAM" + Thread.currentThread());
                         closeCamera();
                         mCameraId = String.valueOf((Integer.parseInt(mCameraId) + 1) % mCameraIds.length);
-                        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                            // TODO: Consider calling
-                            //    ActivityCompat#requestPermissions
-                            // here to request the missing permissions, and then overriding
-                            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                            //                                          int[] grantResults)
-                            // to handle the case where the user grants the permission. See the documentation
-                            // for ActivityCompat#requestPermissions for more details.
-                            return;
-                        }
+                        checkCameraPermission(PERMISSIONS);
                         try {
                             setupCamera(mCameraId, mPreviewSize.getWidth(), mPreviewSize.getHeight());
                             mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
                         } catch (CameraAccessException e) {
                             e.printStackTrace();
                         }
-                        getActivity().runOnUiThread(new Runnable() {
+                        sMainHandler.post(new Runnable() {
                             @Override
                             public void run() {
                                 mCallbacks.setButtonsIsClickable(true);
@@ -481,14 +504,13 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
         @Override
         public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
             super.onCaptureCompleted(session, request, result);
-            getActivity().runOnUiThread(new Runnable() {
+            sMainHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    showToast("Save to "+mSaveImgFile);
-                    mCallbacks.setButtonIsClickable(R.id.camera_button,true);
+                    showToast("Save to " + mSaveImgFile);
+                    mCallbacks.setButtonsIsClickable(true);
                 }
             });
-
         }
 
         @Override
@@ -561,25 +583,13 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
         );
     }
 
-    SaveImgTask.Callback saveImgTaskCallback = new SaveImgTask.Callback() {
-        @Override
-        public void postImageSaved() {
-            mCallbacks.setButtonsIsClickable(true);
-        }
-    };
-
     @Override
     public void onImageAvailable(ImageReader reader) {
         Log.i(TAG, "onImageAvailable: "+Thread.currentThread());
         mSaveImgFile = getSaveImgFile();
         if (!mSaveImgFile.exists()) {
-            SaveImgTask saveImgTask = new SaveImgTask(
-                    reader.acquireLatestImage(),
-                    mSaveImgFile,
-                    saveImgTaskCallback
-            );
-            mHandler.post(saveImgTask);
-
+            new SaveImgTask(reader.acquireLatestImage(),
+                    mSaveImgFile).executeOnExecutor(SaveImgTask.THREAD_POOL_EXECUTOR);
         }
     }
 
@@ -587,7 +597,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     private File getSaveImgFile() {
         if (!mSaveDir.exists()) {
             if (mSaveDir.mkdir()) {
-                Toast.makeText(getActivity(), "mkdir"+mSaveDir, Toast.LENGTH_SHORT).show();
+                showToast("mkdir"+mSaveDir);
             }
         }
 //        Log.i(TAG, "onImageAvailable: "+mSaveDir.toString());
@@ -595,7 +605,6 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
     }
 
     private void closeCamera() {
-
         if (null != mCameraDevice) {
             mCameraDevice.close();
             mCameraDevice = null;
@@ -620,6 +629,7 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
             mRecordSession = null;
         }
     }
+
     private void showToast(final String text) {
         final Activity activity = getActivity();
         if (activity != null) {
@@ -631,6 +641,4 @@ public class CameraFragment extends Fragment implements TextureView.SurfaceTextu
             });
         }
     }
-
-
 }

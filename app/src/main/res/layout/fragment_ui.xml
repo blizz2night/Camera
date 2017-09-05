@@ -13,6 +13,7 @@
         android:layout_height="40dp"
         android:layout_gravity="end"
         android:src="@drawable/ic_change_cam_id"
+        android:clickable="false"
 
         />
     <RelativeLayout
@@ -28,6 +29,8 @@
             android:layout_toStartOf="@+id/camera_button"
             android:layout_marginEnd="30dp"
             android:src="@drawable/ic_open_gallery"
+            android:clickable="false"
+
             />
 
         <ImageButton
@@ -38,7 +41,10 @@
             android:layout_height="80dp"
             android:layout_gravity="center"
             android:layout_centerHorizontal="true"
-            android:src="@drawable/ic_take_photo"/>
+            android:src="@drawable/ic_take_photo"
+            android:clickable="false"
+
+            />
 
         <ImageButton
             style="@style/imageBtn"
@@ -48,7 +54,10 @@
             android:layout_height="80dp"
             android:layout_toEndOf="@id/camera_button"
             android:layout_marginStart="30dp"
-            android:src="@drawable/ic_record_video"/>
+            android:src="@drawable/ic_record_video"
+            android:clickable="false"
+
+            />
 
     </RelativeLayout>
 
