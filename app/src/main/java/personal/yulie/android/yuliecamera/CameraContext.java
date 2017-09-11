@@ -32,6 +32,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import personal.yulie.android.yuliecamera.utils.SaveImgTask;
+
 
 public class CameraContext implements ImageReader.OnImageAvailableListener {
 
@@ -61,7 +63,7 @@ public class CameraContext implements ImageReader.OnImageAvailableListener {
     private CaptureRequest.Builder mRecordRequestBuilder;
     private boolean mIsRecording = false;
     private String mRecordOutputUrl;
-    private CameraFragment.Callbacks mCallbacks;
+    private Callbacks mCallbacks;
     private File mSaveImgFile;
 
     public TextureView getPreviewView() {
@@ -72,12 +74,19 @@ public class CameraContext implements ImageReader.OnImageAvailableListener {
         mPreviewView = previewView;
     }
 
-    public CameraFragment.Callbacks getCallbacks() {
-        return mCallbacks;
+    public void setCallbacks(Presenter callbacks) {
+        mCallbacks = callbacks;
     }
 
-    public void setCallbacks(CameraFragment.Callbacks callbacks) {
-        mCallbacks = callbacks;
+//    public CameraFragment.Callbacks getCallbacks() {
+//        return mCallbacks;
+//    }
+
+    //    public void setCallbacks(CameraFragment.Callbacks callbacks) {
+//        mCallbacks = callbacks;
+//    }
+    public interface Callbacks {
+        void postImageAvailable();
     }
 
 
@@ -112,8 +121,9 @@ public class CameraContext implements ImageReader.OnImageAvailableListener {
         mImageReader = ImageReader.newInstance(
                 imageSize.getWidth(),
                 imageSize.getHeight(),
-                ImageFormat.JPEG, 1
+                ImageFormat.JPEG, 3
         );
+
 //        mMediaRecorder = new MediaRecorder();
 //        mRecordSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class), width, height);
         mRecordSize = new Size(1280, 720);
@@ -353,6 +363,9 @@ public class CameraContext implements ImageReader.OnImageAvailableListener {
         if (!mSaveImgFile.exists()) {
             new SaveImgTask(reader.acquireLatestImage(),
                     mSaveImgFile).executeOnExecutor(SaveImgTask.THREAD_POOL_EXECUTOR);
+        }
+        if (null != mCallbacks) {
+            mCallbacks.postImageAvailable();
         }
     }
 
